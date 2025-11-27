@@ -68,9 +68,11 @@
     </div>
 
     <script type="module">
-        // 1. IMPORTANDO AS FUNÇÕES DO FIREBASE (NÃO APAGUE ISSO)
+        // 1. IMPORTANDO AS FUNÇÕES DO FIREBASE
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        // Novas importações do Firestore
+        import { getFirestore, collection, addDoc, query, where, onSnapshot, updateDoc, doc, arrayUnion, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         // 2. COLE AQUI SUA CONFIGURAÇÃO (COPIADA DO CONSOLE DO FIREBASE)
         // Substitua tudo dentro das chaves abaixo:
@@ -83,75 +85,189 @@
             appId: "1:73583982316:web:e343f84908fa58f719d7c9"
         };
 
-        // Inicializa o Firebase
+       // Inicializa Apps
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
+        const db = getFirestore(app); // Inicializa o Banco
 
-        // --- LÓGICA DE CADASTRO ---
+        // Variáveis Globais
+        let currentUser = null;
+        let unsubscribePedidos = null; // Para parar de ouvir atualizações quando deslogar
+        let pedidoAtualId = null; // Para saber qual chat está aberto
+
+        // --- AUTENTICAÇÃO (Igual ao anterior) ---
         document.getElementById('btnRegister').addEventListener('click', () => {
             const email = document.getElementById('reg-email').value;
             const pass = document.getElementById('reg-pass').value;
-
-            createUserWithEmailAndPassword(auth, email, pass)
-                .then((userCredential) => {
-                    alert("Conta criada com sucesso! Você já está logado.");
-                    // O onAuthStateChanged vai lidar com a troca de tela
-                })
-                .catch((error) => {
-                    const errorCode = error.code;
-                    let msg = error.message;
-                    if(errorCode === 'auth/email-already-in-use') msg = "Este e-mail já está cadastrado.";
-                    if(errorCode === 'auth/weak-password') msg = "A senha deve ter pelo menos 6 caracteres.";
-                    alert("Erro: " + msg);
-                });
+            createUserWithEmailAndPassword(auth, email, pass).catch(erro => alert(erro.message));
         });
 
-        // --- LÓGICA DE LOGIN ---
         document.getElementById('btnLogin').addEventListener('click', () => {
             const email = document.getElementById('login-email').value;
             const pass = document.getElementById('login-pass').value;
-
-            signInWithEmailAndPassword(auth, email, pass)
-                .then((userCredential) => {
-                    // Login ok
-                })
-                .catch((error) => {
-                    alert("E-mail ou senha incorretos.");
-                });
+            signInWithEmailAndPassword(auth, email, pass).catch(erro => alert("Erro ao entrar: " + erro.message));
         });
 
-        // --- OBSERVADOR DE ESTADO (MONITORA SE TÁ LOGADO) ---
+        window.logout = function() { signOut(auth); }
+        window.toggleAuth = function(screen) {
+            document.getElementById('login-form').classList.toggle('hidden');
+            document.getElementById('register-form').classList.toggle('hidden');
+        }
+
+        // --- OBSERVADOR DE LOGIN (AQUI A MÁGICA ACONTECE) ---
         onAuthStateChanged(auth, (user) => {
+            currentUser = user;
             if (user) {
-                // Usuário está logado
+                // Usuário Logou
                 document.getElementById('auth-screen').classList.add('hidden');
                 document.getElementById('app-screen').classList.remove('hidden');
                 document.getElementById('display-email').innerText = user.email;
+                
+                // Começar a "escutar" os pedidos desse usuário em tempo real
+                iniciarEscutaDePedidos(user.uid);
             } else {
-                // Usuário NÃO está logado
+                // Usuário Saiu
                 document.getElementById('auth-screen').classList.remove('hidden');
                 document.getElementById('app-screen').classList.add('hidden');
+                
+                // Para de escutar o banco para economizar dados
+                if(unsubscribePedidos) unsubscribePedidos();
+                document.getElementById('order-list').innerHTML = '';
             }
         });
 
-        // --- FUNÇÃO DE SAIR (LOGOUT) ---
-        window.logout = function() {
-            signOut(auth).then(() => {
-                alert("Você saiu.");
-            }).catch((error) => {
-                console.error(error);
+        // --- FUNÇÕES DO BANCO DE DADOS (FIRESTORE) ---
+
+        // 1. OUVIR PEDIDOS EM TEMPO REAL
+        function iniciarEscutaDePedidos(uid) {
+            // Busca na coleção 'pedidos' onde o campo 'uid_cliente' é igual ao ID do usuário logado
+            const q = query(collection(db, "pedidos"), where("uid_cliente", "==", uid));
+
+            // onSnapshot roda toda vez que algo muda no banco (tempo real)
+            unsubscribePedidos = onSnapshot(q, (querySnapshot) => {
+                const lista = document.getElementById('order-list');
+                lista.innerHTML = ''; // Limpa lista visual
+
+                if (querySnapshot.empty) {
+                    lista.innerHTML = '<p style="padding:20px; text-align:center; color:#a0aec0;">Nenhuma compra.</p>';
+                }
+
+                querySnapshot.forEach((doc) => {
+                    const pedido = doc.data();
+                    const div = document.createElement('div');
+                    div.className = 'order-item';
+                    // Se este for o pedido aberto no chat, marca como ativo visualmente
+                    if(doc.id === pedidoAtualId) div.style.background = "rgba(111, 66, 193, 0.1)";
+                    
+                    div.innerHTML = `
+                        <div style="font-weight: bold;">${pedido.produto}</div>
+                        <div style="font-size: 10px; color: #a0aec0;">ID: ${doc.id.substr(0,5)}...</div>
+                        <div style="font-size: 10px; color: #38a169;">STATUS: ${pedido.status.toUpperCase()}</div>
+                    `;
+                    
+                    // Ao clicar, abre o chat desse pedido
+                    div.onclick = () => carregarChat(doc.id, pedido);
+                    lista.appendChild(div);
+                    
+                    // Se o chat estiver aberto, atualiza as mensagens dele em tempo real também
+                    if(doc.id === pedidoAtualId) {
+                        renderizarMensagensChat(pedido.mensagens || []);
+                    }
+                });
             });
         }
 
-        // --- FUNÇÃO PARA TROCAR ENTRE LOGIN E CADASTRO ---
-        window.toggleAuth = function(screen) {
-            if(screen === 'register') {
-                document.getElementById('login-form').classList.add('hidden');
-                document.getElementById('register-form').classList.remove('hidden');
-            } else {
-                document.getElementById('register-form').classList.add('hidden');
-                document.getElementById('login-form').classList.remove('hidden');
+        // 2. SALVAR NOVO PEDIDO (SIMULAÇÃO DE COMPRA)
+        window.iniciarCompra = function(nomeProduto, valor) {
+            // Guarda dados na memória temporária para o modal
+            window.tempProduto = { nome: nomeProduto, valor: valor };
+            document.getElementById('payment-modal').classList.remove('hidden');
+        }
+
+        window.fecharModal = function() {
+            document.getElementById('payment-modal').classList.add('hidden');
+        }
+
+        window.confirmarPagamentoSimulado = async function() {
+            if(!currentUser) return alert("Erro: Você não está logado!");
+
+            const produto = window.tempProduto;
+            
+            try {
+                // CRIA O DOCUMENTO NO FIRESTORE
+                await addDoc(collection(db, "pedidos"), {
+                    uid_cliente: currentUser.uid,
+                    email_cliente: currentUser.email,
+                    produto: produto.nome,
+                    valor: produto.valor,
+                    status: 'pago', // Em produção, isso viria do Webhook do Mercado Pago
+                    data_criacao: serverTimestamp(),
+                    mensagens: [
+                        { tipo: 'system', texto: 'Pagamento iniciado. Aguardando vendedor.', data: new Date().toISOString() }
+                    ]
+                });
+
+                alert("Compra realizada com sucesso! Verifique a aba 'Minhas Compras'.");
+                fecharModal();
+                showChat(); // Leva o usuário pra tela de chat
+            } catch (e) {
+                console.error("Erro ao salvar:", e);
+                alert("Erro ao processar compra: " + e.message);
             }
+        }
+
+        // --- FUNÇÕES DE CHAT ---
+
+        function carregarChat(docId, dadosPedido) {
+            pedidoAtualId = docId;
+            document.getElementById('chat-window').classList.remove('hidden');
+            document.getElementById('chat-title').innerText = `${dadosPedido.produto}`;
+            renderizarMensagensChat(dadosPedido.mensagens || []);
+        }
+
+        function renderizarMensagensChat(msgs) {
+            const areaMsg = document.getElementById('chat-msgs');
+            areaMsg.innerHTML = '';
+            
+            msgs.forEach(msg => {
+                const div = document.createElement('div');
+                div.className = `message msg-${msg.tipo}`;
+                div.innerText = msg.texto;
+                areaMsg.appendChild(div);
+            });
+            areaMsg.scrollTop = areaMsg.scrollHeight;
+        }
+
+        window.enviarMensagem = async function() {
+            const input = document.getElementById('msg-input');
+            const texto = input.value;
+            if(!texto || !pedidoAtualId) return;
+
+            // Atualiza o documento no banco adicionando a nova mensagem ao array
+            const pedidoRef = doc(db, "pedidos", pedidoAtualId);
+
+            try {
+                await updateDoc(pedidoRef, {
+                    mensagens: arrayUnion({
+                        tipo: 'user',
+                        texto: texto,
+                        data: new Date().toISOString()
+                    })
+                });
+                input.value = ''; // Limpa campo
+            } catch (e) {
+                console.error("Erro ao enviar msg:", e);
+            }
+        }
+
+        // --- NAVEGAÇÃO ENTRE TELAS ---
+        window.showStore = function() {
+            document.getElementById('store-area').classList.remove('hidden');
+            document.getElementById('chat-area').classList.add('hidden');
+        }
+        window.showChat = function() {
+            document.getElementById('store-area').classList.add('hidden');
+            document.getElementById('chat-area').classList.remove('hidden');
         }
     </script>
 </body>
