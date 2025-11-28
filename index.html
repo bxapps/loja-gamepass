@@ -12,7 +12,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
 
     <style>
-        /* --- ESTILOS VISUAIS (Mantidos) --- */
+        /* --- ESTILOS VISUAIS --- */
         :root {
             --bg-body: #0b1116; --bg-card: #161f28; --bg-chat: #1c2530;
             --primary: #6f42c1; --primary-hover: #5a32a3;
@@ -59,6 +59,13 @@
         .message { padding: 10px 15px; border-radius: 8px; font-size: 13px; max-width: 75%; }
         .msg-seller { background: var(--bg-body); border: 1px solid var(--border); align-self: flex-start; }
         .msg-user { background: var(--primary); color: white; align-self: flex-end; }
+        .msg-system { background: rgba(56, 161, 105, 0.2); color: #48bb78; align-self: center; font-size: 11px; width: 100%; text-align: center; }
+
+        /* Modal do Mercado Pago */
+        #mp-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: flex; align-items: center; justify-content: center; z-index: 2000; }
+        .mp-content { background: white; padding: 30px; border-radius: 12px; text-align: center; max-width: 400px; width: 90%; color: #333; }
+        /* Oculta botão antigo do MP se houver conflito de CSS */
+        .mercadopago-button { width: 100% !important; margin-top: 15px !important; }
     </style>
 </head>
 <body>
@@ -101,13 +108,13 @@
                 <div class="card">
                     <h3>Xbox Game Pass - 1 Mês</h3>
                     <p class="card-price">R$ 34,90</p>
-                    <button class="btn btn-primary" onclick="irParaPagamento('Game Pass 1 Mês', 'https://mpago.la/2xqjmbf')">COMPRAR</button>
+                    <button class="btn btn-primary" onclick="abrirCheckout('Game Pass 1 Mês', '515459427-c84ccdba-af7b-478e-b668-c8b9aa034369')">COMPRAR</button>
                 </div>
 
                 <div class="card">
                     <h3>Conta LoL - Nível 30</h3>
                     <p class="card-price">R$ 20,00</p>
-                    <button class="btn btn-primary" onclick="irParaPagamento('Conta LoL', 'https://mpago.la/2xqjmbf')">COMPRAR</button>
+                    <button class="btn btn-primary" onclick="alert('Você precisa gerar outro ID no Mercado Pago para este produto!')">COMPRAR</button>
                 </div>
 
             </div>
@@ -129,8 +136,19 @@
         </div>
     </div>
 
+    <div id="mp-modal" class="hidden">
+        <div class="mp-content">
+            <h3 style="margin-bottom: 10px; color:#333;">Finalizar Pagamento</h3>
+            <p style="font-size: 12px; margin-bottom: 20px; color:#666;">Clique no botão abaixo para pagar com segurança via Mercado Pago.</p>
+            
+            <div id="button-container"></div>
+
+            <button onclick="fecharCheckout()" style="margin-top: 20px; background: transparent; border: 1px solid #ccc; padding: 8px 15px; border-radius: 4px; cursor: pointer; color: #333;">Fechar / Já Paguei</button>
+        </div>
+    </div>
+
     <script>
-        // CONFIGURACAO DO FIREBASE
+        // CONFIGURACAO DO FIREBASE (MANTENHA SUA CHAVE AQUI)
         const firebaseConfig = {
             apiKey: "AIzaSyAy0Eq6Xk3224bByT7xk96pI__oo2NMC1s", 
             authDomain: "globalccc-6df95.firebaseapp.com",
@@ -175,24 +193,41 @@
             }
         });
 
-        // --- FUNÇÃO SIMPLIFICADA DE PAGAMENTO ---
-        function irParaPagamento(nomeProduto, linkPagamento) {
+        // --- SISTEMA DE CHECKOUT COM O BOTÃO DO USUARIO ---
+        function abrirCheckout(nomeProduto, preferenceId) {
             if (!currentUser) return alert("Faça login para continuar.");
 
-            // 1. Abre o link do Mercado Pago imediatamente
-            window.open(linkPagamento, '_blank');
-
-            // 2. Salva no banco apenas para abrir o chat (Manual)
+            // 1. Criar pedido no Firebase para garantir o histórico
             db.collection('pedidos').add({
                 uid_cliente: currentUser.uid,
                 email_cliente: currentUser.email,
                 produto: nomeProduto,
-                status: 'Aguardando Pagamento', // Status fixo
+                status: 'Aguardando Pagamento',
                 data_criacao: firebase.firestore.FieldValue.serverTimestamp(),
-                mensagens: [{ tipo: 'system', texto: 'Você clicou em comprar. Após pagar, envie o comprovante aqui.' }]
+                mensagens: [{ tipo: 'system', texto: 'Aguardando confirmação do pagamento pelo botão.' }]
             }).then(() => {
-                showChat(); // Leva o usuário pro chat
+                
+                // 2. Limpar o container do botão anterior (se houver)
+                const container = document.getElementById('button-container');
+                container.innerHTML = '';
+
+                // 3. Criar e injetar o script do Mercado Pago dinamicamente
+                const script = document.createElement('script');
+                script.src = "https://www.mercadopago.com.br/integrations/v1/web-payment-checkout.js";
+                script.dataset.preferenceId = preferenceId; // Usa o ID passado no clique
+                script.dataset.source = "button";
+                
+                container.appendChild(script);
+
+                // 4. Mostrar o modal
+                document.getElementById('mp-modal').classList.remove('hidden');
+
             });
+        }
+
+        function fecharCheckout() {
+            document.getElementById('mp-modal').classList.add('hidden');
+            showChat(); // Leva para o chat para confirmar
         }
 
         // --- CHAT E SISTEMA ---
