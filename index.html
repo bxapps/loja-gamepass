@@ -3,290 +3,211 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GlobalCCC Store | Game Pass</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
-
+    <title>Xbox Game Pass Ultimate - Compra Segura</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
-        /* --- ESTILOS VISUAIS --- */
-        :root {
-            --bg-body: #0b1116; --bg-card: #161f28; --bg-chat: #1c2530;
-            --primary: #6f42c1; --primary-hover: #5a32a3;
-            --text-main: #edf2f7; --text-sec: #a0aec0;
-            --green: #38a169; --border: #2d3748;
+        /* Reset e Estilos Gerais parecidos com GGMAX */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background-color: #0b0d12; /* Fundo Escuro */
+            color: #ffffff;
+            font-family: 'Inter', sans-serif;
         }
 
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Inter', sans-serif; background: var(--bg-body); color: var(--text-main); font-size: 14px; height: 100vh; display: flex; flex-direction: column; }
-        a { text-decoration: none; color: inherit; cursor: pointer; }
-        
-        .hidden { display: none !important; }
-        .btn { padding: 12px; border-radius: 6px; border: none; font-weight: 600; cursor: pointer; transition: 0.2s; width: 100%; margin-top: 10px; }
-        .btn-primary { background: var(--primary); color: white; }
-        .btn-primary:hover { background: var(--primary-hover); }
-        .btn-outline { border: 1px solid var(--border); background: transparent; color: var(--text-sec); width: auto; margin: 0; }
-        .btn-link { background: none; color: var(--primary); font-size: 12px; text-decoration: underline; margin-top: 15px; }
+        /* Header Simples */
+        header {
+            background-color: #161923;
+            padding: 20px;
+            border-bottom: 1px solid #2d3246;
+            display: flex;
+            justify-content: center;
+        }
+        .logo {
+            font-weight: 800;
+            font-size: 1.5rem;
+            color: #6c5ce7; /* Roxo GGMAX */
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
 
-        /* --- TELA DE LOGIN --- */
-        #auth-screen { display: flex; align-items: center; justify-content: center; height: 100vh; }
-        .auth-box { background: var(--bg-card); padding: 40px; border-radius: 12px; border: 1px solid var(--border); width: 100%; max-width: 400px; text-align: center; }
-        .auth-input { width: 100%; background: var(--bg-body); border: 1px solid var(--border); padding: 12px; color: white; border-radius: 6px; margin-bottom: 10px; }
-        .logo-large { font-size: 32px; font-weight: 800; color: var(--primary); margin-bottom: 30px; display: block; }
+        /* Container Principal */
+        .container {
+            max-width: 1100px;
+            margin: 40px auto;
+            padding: 0 20px;
+            display: grid;
+            grid-template-columns: 1fr 1fr; /* Dividir em imagem e detalhes */
+            gap: 40px;
+        }
 
-        /* --- APP SCREEN --- */
-        header { background: var(--bg-card); padding: 15px 0; border-bottom: 1px solid var(--border); }
-        .navbar { display: flex; justify-content: space-between; align-items: center; max-width: 1200px; margin: 0 auto; padding: 0 20px; }
-        .user-menu { display: flex; gap: 15px; align-items: center; }
-        
-        .screen { flex: 1; padding: 20px; max-width: 1200px; margin: 0 auto; width: 100%; }
-        
-        .products-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; margin-top: 20px; }
-        .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
-        .card-price { color: var(--green); font-size: 20px; font-weight: 700; margin: 10px 0; }
+        /* Coluna da Imagem */
+        .product-image {
+            background-color: #161923;
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #2d3246;
+        }
+        .product-image img {
+            max-width: 100%;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+        }
 
-        /* Chat */
-        #chat-container { display: flex; height: 70vh; gap: 20px; margin-top: 20px; }
-        .order-list { width: 30%; background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 15px; overflow-y: auto; }
-        .order-item { padding: 15px; border-bottom: 1px solid var(--border); cursor: pointer; }
-        .order-item:hover { background: rgba(255,255,255,0.05); }
-        
-        .chat-window { flex: 1; background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; }
-        .chat-messages { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
-        .message { padding: 10px 15px; border-radius: 8px; font-size: 13px; max-width: 75%; }
-        .msg-seller { background: var(--bg-body); border: 1px solid var(--border); align-self: flex-start; }
-        .msg-user { background: var(--primary); color: white; align-self: flex-end; }
-        .msg-system { background: rgba(56, 161, 105, 0.2); color: #48bb78; align-self: center; font-size: 11px; width: 100%; text-align: center; }
+        /* Coluna de Detalhes */
+        .product-details {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
 
-        /* Modal do Mercado Pago */
-        #mp-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: flex; align-items: center; justify-content: center; z-index: 2000; }
-        .mp-content { background: white; padding: 30px; border-radius: 12px; text-align: center; max-width: 400px; width: 90%; color: #333; }
-        /* Oculta botão antigo do MP se houver conflito de CSS */
-        .mercadopago-button { width: 100% !important; margin-top: 15px !important; }
+        .breadcrumb {
+            color: #8b949e;
+            font-size: 0.9rem;
+        }
+
+        h1 {
+            font-size: 2rem;
+            line-height: 1.2;
+        }
+
+        .badges {
+            display: flex;
+            gap: 10px;
+        }
+        .badge {
+            background-color: #238636;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .price-card {
+            background-color: #161923;
+            border: 1px solid #2d3246;
+            border-radius: 12px;
+            padding: 25px;
+            margin-top: 20px;
+        }
+
+        .price-label {
+            color: #8b949e;
+            font-size: 0.9rem;
+        }
+
+        .price-value {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: #2ecc71; /* Verde Preço */
+            margin: 10px 0 20px 0;
+        }
+
+        .features {
+            list-style: none;
+            margin-bottom: 20px;
+        }
+        .features li {
+            margin-bottom: 8px;
+            color: #c9d1d9;
+            display: flex;
+            align-items: center;
+        }
+        .features li::before {
+            content: "✔";
+            color: #6c5ce7;
+            margin-right: 10px;
+        }
+
+        /* Estilização do Botão Mercado Pago para centralizar */
+        .mp-button-container {
+            width: 100%;
+        }
+        /* Força o botão do MP a ocupar largura total se possível */
+        .mercadopago-button {
+            width: 100% !important;
+            font-family: 'Inter', sans-serif !important;
+        }
+
+        /* Descrição */
+        .description-box {
+            margin-top: 40px;
+            background-color: #161923;
+            padding: 30px;
+            border-radius: 12px;
+            line-height: 1.6;
+            color: #c9d1d9;
+        }
+
+        /* Responsividade para celular */
+        @media (max-width: 768px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+            .price-value {
+                font-size: 2rem;
+            }
+        }
     </style>
 </head>
 <body>
 
-    <div id="auth-screen">
-        <div id="login-form" class="auth-box">
-            <span class="logo-large">GLOBAL<span style="color:white">CCC</span></span>
-            <input type="email" id="login-email" class="auth-input" placeholder="Seu E-mail">
-            <input type="password" id="login-pass" class="auth-input" placeholder="Sua Senha">
-            <button class="btn btn-primary" onclick="fazerLogin()">ENTRAR</button>
-            <button class="btn btn-link" onclick="toggleAuth('register')">Não tem conta? Crie agora</button>
+    <header>
+        <div class="logo">GAMER STORE</div>
+    </header>
+
+    <div class="container">
+        <div class="product-image">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/0/01/Xbox_Game_Pass_logo_2020.svg/1200px-Xbox_Game_Pass_logo_2020.svg.png" alt="Xbox Game Pass">
         </div>
 
-        <div id="register-form" class="auth-box hidden">
-            <span class="logo-large">CRIAR CONTA</span>
-            <input type="email" id="reg-email" class="auth-input" placeholder="Seu melhor E-mail">
-            <input type="password" id="reg-pass" class="auth-input" placeholder="Senha (min 6 digitos)">
-            <button class="btn btn-primary" onclick="criarConta()">CADASTRAR</button>
-            <button class="btn btn-link" onclick="toggleAuth('login')">Já tenho conta. Fazer Login</button>
-        </div>
-    </div>
-
-    <div id="app-screen" class="hidden">
-        <header>
-            <div class="navbar">
-                <div class="logo" style="font-weight: 800; font-size: 20px; color: var(--primary); cursor:pointer;" onclick="showStore()">GLOBAL<span style="color:white">CCC</span></div>
-                <div class="user-menu">
-                    <span id="display-email" style="font-size:12px; color:var(--text-sec); margin-right:10px;"></span>
-                    <button class="btn btn-outline" onclick="showStore()">Loja</button>
-                    <button class="btn btn-primary" style="width:auto; margin:0;" onclick="showChat()">Minhas Compras</button>
-                    <button class="btn" style="background:#e53e3e; color:white; width:auto; margin:0; padding:10px;" onclick="sair()">Sair</button>
-                </div>
-            </div>
-        </header>
-
-        <div id="store-area" class="screen">
-            <h2 style="margin-bottom: 20px;">Catálogo</h2>
-            <div class="products-grid">
-                
-                <div class="card">
-                    <h3>Xbox Game Pass - 1 Mês</h3>
-                    <p class="card-price">R$ 34,90</p>
-                    <button class="btn btn-primary" onclick="abrirCheckout('Game Pass 1 Mês', '515459427-c84ccdba-af7b-478e-b668-c8b9aa034369')">COMPRAR</button>
-                </div>
-
-                <div class="card">
-                    <h3>Conta LoL - Nível 30</h3>
-                    <p class="card-price">R$ 20,00</p>
-                    <button class="btn btn-primary" onclick="alert('Você precisa gerar outro ID no Mercado Pago para este produto!')">COMPRAR</button>
-                </div>
-
-            </div>
-        </div>
-
-        <div id="chat-area" class="screen hidden">
-            <h2 style="margin-bottom: 10px;">Suas Compras</h2>
-            <div id="chat-container">
-                <div class="order-list" id="order-list"></div>
-                <div class="chat-window hidden" id="chat-window">
-                    <div style="padding:15px; background:var(--bg-chat); border-bottom:1px solid var(--border); font-weight:bold;" id="chat-title">Chat</div>
-                    <div class="chat-messages" id="chat-msgs"></div>
-                    <div style="padding:15px; background:var(--bg-chat); display:flex; gap:10px;">
-                        <input type="text" id="msg-input" placeholder="Mensagem..." style="flex:1; padding:10px; border-radius:6px; border:none;">
-                        <button class="btn btn-primary" style="width:auto; margin:0;" onclick="enviarMensagem()">Enviar</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div id="mp-modal" class="hidden">
-        <div class="mp-content">
-            <h3 style="margin-bottom: 10px; color:#333;">Finalizar Pagamento</h3>
-            <p style="font-size: 12px; margin-bottom: 20px; color:#666;">Clique no botão abaixo para pagar com segurança via Mercado Pago.</p>
+        <div class="product-details">
+            <div class="breadcrumb">Início > Assinaturas > Xbox</div>
+            <h1>Xbox Game Pass Ultimate - 1 Mês (Envio Automático)</h1>
             
-            <div id="button-container"></div>
+            <div class="badges">
+                <span class="badge">Entrega Imediata</span>
+                <span class="badge" style="background-color: #6c5ce7;">Vendedor Verificado</span>
+            </div>
 
-            <button onclick="fecharCheckout()" style="margin-top: 20px; background: transparent; border: 1px solid #ccc; padding: 8px 15px; border-radius: 4px; cursor: pointer; color: #333;">Fechar / Já Paguei</button>
+            <div class="price-card">
+                <p class="price-label">Preço Unitário</p>
+                <div class="price-value">R$ 49,90</div>
+
+                <ul class="features">
+                    <li>Acesso a centenas de jogos</li>
+                    <li>Inclui EA Play</li>
+                    <li>Jogue no PC, Console e Nuvem</li>
+                    <li>Código de 25 dígitos original</li>
+                </ul>
+
+                <div class="mp-button-container">
+                    <script src="https://www.mercadopago.com.br/integrations/v1/web-payment-checkout.js"
+                    data-preference-id="515459427-c84ccdba-af7b-478e-b668-c8b9aa034369" data-source="button">
+                    </script>
+                </div>
+                <p style="font-size: 0.8rem; color: #8b949e; text-align: center; margin-top: 10px;">
+                    Ambiente seguro Mercado Pago. <br>Após pagar, aguarde o redirecionamento.
+                </p>
+            </div>
         </div>
     </div>
 
-    <script>
-        // CONFIGURACAO DO FIREBASE (MANTENHA SUA CHAVE AQUI)
-        const firebaseConfig = {
-            apiKey: "AIzaSyAy0Eq6Xk3224bByT7xk96pI__oo2NMC1s", 
-            authDomain: "globalccc-6df95.firebaseapp.com",
-            projectId: "globalccc-6df95",
-            storageBucket: "globalccc-6df95.firebasestorage.app",
-            messagingSenderId: "367370838341",
-            appId: "1:367370838341:web:1e35d21882c5f114c8d5a1"
-        };
+    <div class="container">
+        <div class="description-box">
+            <h3>Descrição do Produto</h3>
+            <br>
+            <p>Adquira agora seu <strong>Xbox Game Pass Ultimate</strong>. Tenha acesso a uma biblioteca com mais de 100 jogos de alta qualidade.</p>
+            <br>
+            <p><strong>Como funciona?</strong><br>
+            1. Clique no botão azul para pagar via Mercado Pago.<br>
+            2. Realize o pagamento (Pix, Cartão, etc).<br>
+            3. Após a confirmação, você será redirecionado automaticamente para retirar seu código.</p>
+        </div>
+    </div>
 
-        firebase.initializeApp(firebaseConfig);
-        const auth = firebase.auth();
-        const db = firebase.firestore();
-
-        let currentUser = null;
-        let currentChatId = null;
-
-        // AUTH
-        function fazerLogin() {
-            auth.signInWithEmailAndPassword(document.getElementById('login-email').value, document.getElementById('login-pass').value)
-                .catch(e => alert("Erro: " + e.message));
-        }
-        function criarConta() {
-            auth.createUserWithEmailAndPassword(document.getElementById('reg-email').value, document.getElementById('reg-pass').value)
-                .catch(e => alert("Erro: " + e.message));
-        }
-        function sair() { auth.signOut(); }
-        function toggleAuth() {
-            document.getElementById('login-form').classList.toggle('hidden');
-            document.getElementById('register-form').classList.toggle('hidden');
-        }
-
-        auth.onAuthStateChanged(user => {
-            currentUser = user;
-            if (user) {
-                document.getElementById('auth-screen').classList.add('hidden');
-                document.getElementById('app-screen').classList.remove('hidden');
-                document.getElementById('display-email').innerText = user.email;
-                carregarPedidos(user.uid);
-            } else {
-                document.getElementById('auth-screen').classList.remove('hidden');
-                document.getElementById('app-screen').classList.add('hidden');
-            }
-        });
-
-        // --- SISTEMA DE CHECKOUT COM O BOTÃO DO USUARIO ---
-        function abrirCheckout(nomeProduto, preferenceId) {
-            if (!currentUser) return alert("Faça login para continuar.");
-
-            // 1. Criar pedido no Firebase para garantir o histórico
-            db.collection('pedidos').add({
-                uid_cliente: currentUser.uid,
-                email_cliente: currentUser.email,
-                produto: nomeProduto,
-                status: 'Aguardando Pagamento',
-                data_criacao: firebase.firestore.FieldValue.serverTimestamp(),
-                mensagens: [{ tipo: 'system', texto: 'Aguardando confirmação do pagamento pelo botão.' }]
-            }).then(() => {
-                
-                // 2. Limpar o container do botão anterior (se houver)
-                const container = document.getElementById('button-container');
-                container.innerHTML = '';
-
-                // 3. Criar e injetar o script do Mercado Pago dinamicamente
-                const script = document.createElement('script');
-                script.src = "https://www.mercadopago.com.br/integrations/v1/web-payment-checkout.js";
-                script.dataset.preferenceId = preferenceId; // Usa o ID passado no clique
-                script.dataset.source = "button";
-                
-                container.appendChild(script);
-
-                // 4. Mostrar o modal
-                document.getElementById('mp-modal').classList.remove('hidden');
-
-            });
-        }
-
-        function fecharCheckout() {
-            document.getElementById('mp-modal').classList.add('hidden');
-            showChat(); // Leva para o chat para confirmar
-        }
-
-        // --- CHAT E SISTEMA ---
-        function carregarPedidos(uid) {
-            db.collection('pedidos').where('uid_cliente', '==', uid).onSnapshot(snapshot => {
-                const lista = document.getElementById('order-list');
-                lista.innerHTML = '';
-                if(snapshot.empty) lista.innerHTML = '<p style="padding:20px; text-align:center; color:#777;">Sem histórico.</p>';
-
-                snapshot.forEach(doc => {
-                    const data = doc.data();
-                    const div = document.createElement('div');
-                    div.className = 'order-item';
-                    div.innerHTML = `<b>${data.produto}</b><br><small style="color:#e53e3e">${data.status}</small>`;
-                    div.onclick = () => abrirChat(doc.id, data);
-                    lista.appendChild(div);
-                    if(doc.id === currentChatId) renderizarMsgs(data.mensagens);
-                });
-            });
-        }
-
-        function abrirChat(id, data) {
-            currentChatId = id;
-            document.getElementById('chat-window').classList.remove('hidden');
-            document.getElementById('chat-title').innerText = data.produto;
-            renderizarMsgs(data.mensagens);
-        }
-
-        function renderizarMsgs(msgs) {
-            const area = document.getElementById('chat-msgs');
-            area.innerHTML = '';
-            if(!msgs) return;
-            msgs.forEach(m => {
-                const d = document.createElement('div');
-                d.className = `message msg-${m.tipo}`;
-                d.innerText = m.texto;
-                area.appendChild(d);
-            });
-            area.scrollTop = area.scrollHeight;
-        }
-
-        function enviarMensagem() {
-            const txt = document.getElementById('msg-input').value;
-            if(!txt || !currentChatId) return;
-
-            db.collection('pedidos').doc(currentChatId).update({
-                mensagens: firebase.firestore.FieldValue.arrayUnion({ tipo: 'user', texto: txt })
-            });
-            document.getElementById('msg-input').value = '';
-        }
-
-        function showStore() {
-            document.getElementById('store-area').classList.remove('hidden');
-            document.getElementById('chat-area').classList.add('hidden');
-        }
-        function showChat() {
-            document.getElementById('store-area').classList.add('hidden');
-            document.getElementById('chat-area').classList.remove('hidden');
-        }
-    </script>
 </body>
 </html>
