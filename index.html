@@ -6,7 +6,7 @@
     <title>Xbox Game Pass Ultimate - Compra Segura</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
-        /* Reset e Estilos Gerais */
+        /* ESTILO TIPO GGMAX (DARK) */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             background-color: #0b0d12;
@@ -14,25 +14,24 @@
             font-family: 'Inter', sans-serif;
         }
 
-        /* Header */
+        /* CABEÇALHO */
         header {
             background-color: #161923;
             padding: 20px;
             border-bottom: 1px solid #2d3246;
-            display: flex;
-            justify-content: center;
+            text-align: center;
         }
         .logo {
             font-weight: 800;
             font-size: 1.5rem;
-            color: #6c5ce7;
+            color: #6c5ce7; /* Roxo GGMAX */
             text-transform: uppercase;
             letter-spacing: 2px;
         }
 
-        /* Layout */
+        /* CONTAINER PRINCIPAL */
         .container {
-            max-width: 1100px;
+            max-width: 1000px;
             margin: 40px auto;
             padding: 0 20px;
             display: grid;
@@ -40,7 +39,7 @@
             gap: 40px;
         }
 
-        /* Imagem */
+        /* IMAGEM DO PRODUTO */
         .product-image {
             background-color: #161923;
             border-radius: 12px;
@@ -56,15 +55,15 @@
             box-shadow: 0 4px 20px rgba(0,0,0,0.5);
         }
 
-        /* Detalhes */
+        /* INFORMAÇÕES E PAGAMENTO */
         .product-details {
             display: flex;
             flex-direction: column;
-            gap: 20px;
+            gap: 15px;
         }
 
         .breadcrumb { color: #8b949e; font-size: 0.9rem; }
-        h1 { font-size: 2rem; line-height: 1.2; }
+        h1 { font-size: 1.8rem; line-height: 1.2; }
 
         .badges { display: flex; gap: 10px; }
         .badge {
@@ -76,15 +75,14 @@
             font-weight: 600;
         }
 
-        /* Card de Preço */
+        /* CAIXA DE PREÇO */
         .price-card {
             background-color: #161923;
             border: 1px solid #2d3246;
             border-radius: 12px;
             padding: 25px;
-            margin-top: 20px;
+            margin-top: 10px;
         }
-        .price-label { color: #8b949e; font-size: 0.9rem; }
         .price-value {
             font-size: 2.5rem;
             font-weight: 800;
@@ -105,39 +103,20 @@
             margin-right: 10px;
         }
 
-        /* NOVO ESTILO DO BOTÃO (Estilo Mercado Pago) */
-        .btn-mercadopago {
-            display: block;
+        /* AJUSTE DO BOTÃO MERCADO PAGO */
+        .mp-container {
             width: 100%;
-            background-color: #009ee3; /* Azul MP */
-            color: white;
-            font-weight: 700;
-            text-align: center;
-            padding: 18px;
-            border-radius: 8px;
-            text-decoration: none;
-            font-size: 1.1rem;
-            transition: background-color 0.2s, transform 0.1s;
-            border: none;
-            cursor: pointer;
-            font-family: 'Inter', sans-serif;
+            display: flex;
+            justify-content: center;
         }
-        .btn-mercadopago:hover {
-            background-color: #007eb5;
-        }
-        .btn-mercadopago:active {
-            transform: scale(0.98);
+        .mercadopago-button {
+            width: 100% !important;
+            border-radius: 6px !important; 
+            font-family: 'Inter', sans-serif !important;
+            font-weight: bold !important;
         }
 
-        .description-box {
-            margin-top: 40px;
-            background-color: #161923;
-            padding: 30px;
-            border-radius: 12px;
-            line-height: 1.6;
-            color: #c9d1d9;
-        }
-
+        /* RESPONSIVO */
         @media (max-width: 768px) {
             .container { grid-template-columns: 1fr; }
         }
@@ -156,46 +135,35 @@
 
         <div class="product-details">
             <div class="breadcrumb">Início > Assinaturas > Xbox</div>
-            <h1>Xbox Game Pass Ultimate - 1 Mês</h1>
+            <h1>Xbox Game Pass Ultimate - 1 Mês (Envio Automático)</h1>
             
             <div class="badges">
-                <span class="badge">Entrega Automática</span>
+                <span class="badge">Entrega Imediata</span>
                 <span class="badge" style="background-color: #6c5ce7;">Vendedor Verificado</span>
             </div>
 
             <div class="price-card">
-                <p class="price-label">Preço Unitário</p>
+                <p style="color: #8b949e;">Preço Unitário</p>
                 <div class="price-value">R$ 49,90</div>
 
                 <ul class="features">
-                    <li>Acesso a centenas de jogos</li>
+                    <li>Acesso a +100 jogos</li>
                     <li>Inclui EA Play</li>
-                    <li>Jogue no PC, Console e Nuvem</li>
-                    <li>Código de 25 dígitos original</li>
+                    <li>Jogue na Nuvem (Cloud)</li>
+                    <li>Código 25 dígitos original</li>
                 </ul>
 
-                <a href="https://mpago.la/2xqjmbf" class="btn-mercadopago" target="_blank">
-                    Pagar com Mercado Pago
-                </a>
+                <div class="mp-container">
+                    <script src="https://www.mercadopago.com.br/integrations/v1/web-payment-checkout.js"
+                    data-preference-id="515459427-c84ccdba-af7b-478e-b668-c8b9aa034369" data-source="button">
+                    </script>
+                </div>
 
                 <p style="font-size: 0.8rem; color: #8b949e; text-align: center; margin-top: 15px;">
                     Ambiente seguro Mercado Pago. <br>
-                    Após o pagamento, aguarde o redirecionamento.
+                    Após pagar, <strong>aguarde o redirecionamento</strong> para pegar o código.
                 </p>
             </div>
-        </div>
-    </div>
-
-    <div class="container">
-        <div class="description-box">
-            <h3>Descrição do Produto</h3>
-            <br>
-            <p>Adquira agora seu <strong>Xbox Game Pass Ultimate</strong>. Tenha acesso a uma biblioteca com mais de 100 jogos de alta qualidade.</p>
-            <br>
-            <p><strong>Como funciona?</strong><br>
-            1. Clique no botão azul para pagar.<br>
-            2. Realize o pagamento (Pix, Cartão, etc).<br>
-            3. <strong>IMPORTANTE:</strong> Ao finalizar, aguarde na tela do Mercado Pago para ser redirecionado automaticamente e pegar seu produto.</p>
         </div>
     </div>
 
