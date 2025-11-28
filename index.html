@@ -61,9 +61,6 @@
         .msg-seller { background: var(--bg-body); border: 1px solid var(--border); align-self: flex-start; }
         .msg-user { background: var(--primary); color: white; align-self: flex-end; }
         .msg-system { background: rgba(56, 161, 105, 0.2); color: #48bb78; align-self: center; font-size: 11px; width: 100%; text-align: center; }
-
-        #payment-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 999; }
-        .modal-content { background: var(--bg-card); padding: 30px; border-radius: 12px; text-align: center; max-width: 400px; border: 1px solid var(--primary); }
     </style>
 </head>
 <body>
@@ -105,12 +102,12 @@
                 <div class="card">
                     <h3>Xbox Game Pass - 1 Mês</h3>
                     <p class="card-price">R$ 34,90</p>
-                    <button class="btn btn-primary" onclick="abrirModal('Game Pass 1 Mês', 34.90)">COMPRAR</button>
+                    <button class="btn btn-primary" onclick="comprarReal('Game Pass 1 Mês', 34.90)">COMPRAR</button>
                 </div>
                 <div class="card">
                     <h3>Conta LoL - Nível 30</h3>
                     <p class="card-price">R$ 20,00</p>
-                    <button class="btn btn-primary" onclick="abrirModal('Conta LoL', 20.00)">COMPRAR</button>
+                    <button class="btn btn-primary" onclick="comprarReal('Conta LoL', 20.00)">COMPRAR</button>
                 </div>
             </div>
         </div>
@@ -131,19 +128,15 @@
         </div>
     </div>
 
-    <div id="payment-modal" class="hidden">
-        <div class="modal-content">
-            <h3>Pagamento (Teste)</h3>
-            <p style="margin:20px 0; color:#ccc;">Clique abaixo para simular o pagamento.</p>
-            <button class="btn btn-outline" onclick="document.getElementById('payment-modal').classList.add('hidden')">Cancelar</button>
-            <button class="btn btn-primary" onclick="confirmarPagamento()">JÁ PAGUEI</button>
-        </div>
-    </div>
-
     <script>
-        // --- COLE SUA CONFIGURAÇÃO AQUI (NÃO ESQUEÇA!) ---
+        // --- 1. CONFIGURAÇÕES IMPORTANTES ---
+        
+        // COLOQUE AQUI O SEU LINK DE PAGAMENTO DO MERCADO PAGO (Link genérico para qualquer valor)
+        // Dica: Use um link de valor variável ou crie links específicos se preferir.
+        const LINK_MERCADO_PAGO = "https://mpago.la/2xqjmbf"; 
+
         const firebaseConfig = {
-            apiKey: "AIzaSyAy0Eq6Xk3224bByT7xk96pI__oo2NMC1s",  // <--- TROQUE ISSO PELA CHAVE DO GOOGLE
+            apiKey: "AIzaSyAy0Eq6Xk3224bByT7xk96pI__oo2NMC1s", 
             authDomain: "globalccc-6df95.firebaseapp.com",
             projectId: "globalccc-6df95",
             storageBucket: "globalccc-6df95.firebasestorage.app",
@@ -152,40 +145,32 @@
         };
         // --------------------------------------------------
 
-        // Inicializa o Firebase (Modo Compat)
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
         const db = firebase.firestore();
 
         let currentUser = null;
-        let tempProduto = null;
         let currentChatId = null;
 
-        // --- SISTEMA DE LOGIN ---
+        // --- AUTH ---
         function fazerLogin() {
             const email = document.getElementById('login-email').value;
             const pass = document.getElementById('login-pass').value;
-            auth.signInWithEmailAndPassword(email, pass)
-                .catch(erro => alert("Erro ao entrar: " + erro.message));
+            auth.signInWithEmailAndPassword(email, pass).catch(erro => alert("Erro: " + erro.message));
         }
 
         function criarConta() {
             const email = document.getElementById('reg-email').value;
             const pass = document.getElementById('reg-pass').value;
-            auth.createUserWithEmailAndPassword(email, pass)
-                .catch(erro => alert("Erro ao criar: " + erro.message));
+            auth.createUserWithEmailAndPassword(email, pass).catch(erro => alert("Erro: " + erro.message));
         }
 
-        function sair() {
-            auth.signOut();
-        }
-
-        function toggleAuth(tela) {
+        function sair() { auth.signOut(); }
+        function toggleAuth() {
             document.getElementById('login-form').classList.toggle('hidden');
             document.getElementById('register-form').classList.toggle('hidden');
         }
 
-        // --- OBSERVADOR DE ESTADO (Login/Logout) ---
         auth.onAuthStateChanged(user => {
             currentUser = user;
             if (user) {
@@ -199,44 +184,50 @@
             }
         });
 
-        // --- SISTEMA DE COMPRA ---
-        function abrirModal(nome, valor) {
-            tempProduto = { nome, valor };
-            document.getElementById('payment-modal').classList.remove('hidden');
-        }
+        // --- SISTEMA DE COMPRA REAL (MERCADO PAGO) ---
+        function comprarReal(nome, valor) {
+            if (!currentUser) return alert("Faça login para comprar!");
 
-        function confirmarPagamento() {
-            if (!currentUser) return;
-            
+            // 1. Cria o pedido como PENDENTE
             db.collection('pedidos').add({
                 uid_cliente: currentUser.uid,
                 email_cliente: currentUser.email,
-                produto: tempProduto.nome,
-                valor: tempProduto.valor,
-                status: 'pago',
+                produto: nome,
+                valor: valor,
+                status: 'pendente', // Status inicial
                 data_criacao: firebase.firestore.FieldValue.serverTimestamp(),
-                mensagens: [{ tipo: 'system', texto: 'Pagamento iniciado.' }]
-            }).then(() => {
-                alert("Compra feita!");
-                document.getElementById('payment-modal').classList.add('hidden');
+                mensagens: [{ tipo: 'system', texto: 'Aguardando confirmação do pagamento...' }]
+            }).then(docRef => {
+                // 2. Monta o link com o ID do pedido escondido
+                const idPedido = docRef.id;
+                const linkFinal = `${LINK_MERCADO_PAGO}?external_reference=${idPedido}`;
+                
+                // 3. Abre o Mercado Pago em nova aba
+                window.open(linkFinal, '_blank');
+                
+                // 4. Mostra o chat pendente
+                alert("Pedido criado! Conclua o pagamento na aba que abriu.");
                 showChat();
-            }).catch(e => alert("Erro: " + e.message));
+            }).catch(e => alert("Erro ao criar pedido: " + e.message));
         }
 
-        // --- SISTEMA DE CHAT ---
+        // --- CHAT ---
         function carregarPedidos(uid) {
             db.collection('pedidos').where('uid_cliente', '==', uid)
               .onSnapshot(snapshot => {
                 const lista = document.getElementById('order-list');
                 lista.innerHTML = '';
-                
                 if(snapshot.empty) lista.innerHTML = '<p style="padding:20px; text-align:center; color:#777;">Sem compras.</p>';
 
                 snapshot.forEach(doc => {
                     const data = doc.data();
                     const div = document.createElement('div');
                     div.className = 'order-item';
-                    div.innerHTML = `<b>${data.produto}</b><br><small>${data.status}</small>`;
+                    
+                    // Muda cor do status dependendo se tá pago ou pendente
+                    let corStatus = data.status === 'pago' ? '#38a169' : '#e53e3e';
+                    
+                    div.innerHTML = `<b>${data.produto}</b><br><small style="color:${corStatus}">${data.status.toUpperCase()}</small>`;
                     div.onclick = () => abrirChat(doc.id, data);
                     lista.appendChild(div);
 
@@ -248,7 +239,7 @@
         function abrirChat(id, data) {
             currentChatId = id;
             document.getElementById('chat-window').classList.remove('hidden');
-            document.getElementById('chat-title').innerText = data.produto;
+            document.getElementById('chat-title').innerText = `${data.produto} (${data.status})`;
             renderizarMsgs(data.mensagens);
         }
 
@@ -279,7 +270,6 @@
             document.getElementById('msg-input').value = '';
         }
 
-        // --- NAVEGAÇÃO ---
         function showStore() {
             document.getElementById('store-area').classList.remove('hidden');
             document.getElementById('chat-area').classList.add('hidden');
